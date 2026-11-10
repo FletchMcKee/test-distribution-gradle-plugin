@@ -24,8 +24,8 @@ internal fun Provider<out Test>.toTestFramework(): Provider<TestFramework> {
 		}
 }
 
+context(gradleSupport: GradleSupport)
 internal fun computeMain(
-	gradleSupport: GradleSupport,
 	testFramework: Provider<TestFramework>,
 	testClasses: FileCollection,
 	testJars: FileCollection,

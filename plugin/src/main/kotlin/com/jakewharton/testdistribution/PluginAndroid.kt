@@ -9,7 +9,8 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.gradle.api.plugins.BasePluginExtension
 
-internal fun Project.configureAndroidPlugin(gradleSupport: GradleSupport) {
+context(gradleSupport: GradleSupport)
+internal fun Project.configureAndroidPlugin() {
 	val agpVersion = AgpVersion.parse(ANDROID_GRADLE_PLUGIN_VERSION)
 	val agpMinimum = AgpVersion.parse("9.0.0")
 	val androidSupport = when {
@@ -55,7 +56,7 @@ internal fun Project.configureAndroidPlugin(gradleSupport: GradleSupport) {
 							view.attributes {
 								it.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "android-classes-jar")
 							}
-						}.files
+						}.files,
 				)
 
 			configureTasks(
@@ -70,7 +71,7 @@ internal fun Project.configureAndroidPlugin(gradleSupport: GradleSupport) {
 			) { scripts ->
 				androidSupport.withTestProvider(project, hostTest) { testTask ->
 					val testFramework = testTask.toTestFramework()
-					scripts.mainClass.set(computeMain(gradleSupport, testFramework, testClasses, testJars))
+					scripts.mainClass.set(computeMain(testFramework, testClasses, testJars))
 				}
 			}
 		}

@@ -32,25 +32,27 @@ public class TestDistributionPlugin : Plugin<Project> {
 			}
 		}
 
-		listOf(
-			"com.android.application",
-			"com.android.library",
-			"com.android.kotlin.multiplatform.library",
-		).forEach { id ->
-			pluginManager.withPlugin(id) {
-				gotPlugin = true
-				configureAndroidPlugin(gradleSupport)
+		context(gradleSupport) {
+			listOf(
+				"com.android.application",
+				"com.android.library",
+				"com.android.kotlin.multiplatform.library",
+			).forEach { id ->
+				pluginManager.withPlugin(id) {
+					gotPlugin = true
+					configureAndroidPlugin()
+				}
 			}
-		}
 
-		pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-			gotPlugin = true
-			configureKotlinMultiplatformPlugin(gradleSupport)
-		}
+			pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+				gotPlugin = true
+				configureKotlinMultiplatformPlugin()
+			}
 
-		pluginManager.withPlugin("org.gradle.java") {
-			gotPlugin = true
-			configureJavaPlugin(gradleSupport)
+			pluginManager.withPlugin("org.gradle.java") {
+				gotPlugin = true
+				configureJavaPlugin()
+			}
 		}
 	}
 }

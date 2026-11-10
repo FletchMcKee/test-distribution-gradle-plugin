@@ -8,7 +8,8 @@ import org.gradle.api.plugins.jvm.JvmTestSuite
 import org.gradle.testing.base.TestingExtension
 
 @Suppress("UnstableApiUsage")
-internal fun Project.configureJavaPlugin(gradleSupport: GradleSupport) {
+context(gradleSupport: GradleSupport)
+internal fun Project.configureJavaPlugin() {
 	val base = extensions.getByType(BasePluginExtension::class.java)
 	val testing = extensions.getByType(TestingExtension::class.java)
 
@@ -27,10 +28,10 @@ internal fun Project.configureJavaPlugin(gradleSupport: GradleSupport) {
 				testClasses = testClasses,
 				testDependencies = testDependencies,
 				mainJar = mainJar,
-				naming = Naming(suite.name)
+				naming = Naming(suite.name),
 			) { scripts ->
 				scripts.mainClass.set(
-					computeMain(gradleSupport, testFrameworkProvider, testClasses, testDependencies)
+					computeMain(testFrameworkProvider, testClasses, testDependencies),
 				)
 			}
 		}

@@ -22,6 +22,10 @@ kotlin {
 	abiValidation {
 		enabled = true
 	}
+
+	compilerOptions {
+		freeCompilerArgs.add("-Xcontext-parameters")
+	}
 }
 
 tasks.named('validatePlugins') {

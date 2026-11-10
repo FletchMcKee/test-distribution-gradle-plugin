@@ -6,7 +6,8 @@ import org.gradle.api.plugins.BasePluginExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
-internal fun Project.configureKotlinMultiplatformPlugin(gradleSupport: GradleSupport) {
+context(gradleSupport: GradleSupport)
+internal fun Project.configureKotlinMultiplatformPlugin() {
 	val base = project.extensions.getByType(BasePluginExtension::class.java)
 	val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
 	kotlin.targets.withType(KotlinJvmTarget::class.java).configureEach { target ->
@@ -31,7 +32,7 @@ internal fun Project.configureKotlinMultiplatformPlugin(gradleSupport: GradleSup
 				),
 			) { scripts ->
 				scripts.mainClass.set(
-					computeMain(gradleSupport, testFramework, testClasses, testDependencies)
+					computeMain(testFramework, testClasses, testDependencies),
 				)
 			}
 		}
