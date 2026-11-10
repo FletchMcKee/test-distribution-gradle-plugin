@@ -1,159 +1,38 @@
 package com.jakewharton.testdistribution
 
-import java.io.File
 import org.gradle.api.Project
-import org.gradle.api.Task
-import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.BasePluginExtension
-import org.gradle.api.plugins.JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME
 import org.gradle.api.plugins.JavaPlugin.JAR_TASK_NAME
-import org.gradle.api.plugins.JavaPlugin.TEST_RUNTIME_CLASSPATH_CONFIGURATION_NAME
-import org.gradle.api.plugins.JavaPlugin.TEST_TASK_NAME
-import org.gradle.api.tasks.Sync
-import org.gradle.api.tasks.TaskProvider
-import org.gradle.api.tasks.application.CreateStartScripts
-import org.gradle.api.tasks.bundling.Jar
-import org.gradle.api.tasks.bundling.Zip
-import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.api.tasks.testing.Test
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation.Companion.TEST_COMPILATION_NAME
+import org.gradle.api.plugins.JvmTestSuitePlugin
+import org.gradle.api.plugins.jvm.JvmTestSuite
+import org.gradle.testing.base.TestingExtension
 
-internal fun configureJavaPlugin(project: Project, gradleSupport: GradleSupport) {
-	val base = project.extensions.getByType(BasePluginExtension::class.java)
+@Suppress("UnstableApiUsage")
+internal fun Project.configureJavaPlugin(gradleSupport: GradleSupport) {
+	val base = extensions.getByType(BasePluginExtension::class.java)
+	val testing = extensions.getByType(TestingExtension::class.java)
 
-	val name = "test"
-	val nameUpper = name.replaceFirstChar(Char::uppercase)
+	testing.suites.withType(JvmTestSuite::class.java).configureEach { suite ->
+		val builtIn = suite.name == JvmTestSuitePlugin.DEFAULT_TEST_SUITE_NAME
+		val mainJar = objects.fileCollection()
+			.apply { if (builtIn) from(tasks.named(JAR_TASK_NAME)) }
 
-	val testJarProvider = project.tasks.register("jar$nameUpper", Jar::class.java) {
-		it.archiveClassifier.set("tests")
-	}
+		val testClasses = files(suite.sources.output)
+		val testDependencies = files(configurations.named(suite.sources.runtimeClasspathConfigurationName))
 
-	val testScriptsProvider = project.tasks.register("scripts$nameUpper", CreateStartScripts::class.java) {
-		it.outputDir = project.layout.buildDirectory.dir("scripts/$name").get().asFile
-		it.applicationName = base.archivesName.get() + "-test"
-	}
-
-	val installProvider = project.tasks.register("install${nameUpper}Distribution", Sync::class.java) {
-		it.group = "distribution"
-		it.description = "Installs $name as a distribution as-is."
-		it.destinationDir = project.layout.buildDirectory.dir("install/$name").get().asFile
-	}
-
-	project.tasks.register("zip${nameUpper}Distribution", Zip::class.java) {
-		it.group = "distribution"
-		it.description = "Bundles $name as a distribution."
-
-		it.from(installProvider)
-		it.destinationDirectory.set(project.layout.buildDirectory.dir("dist"))
-		it.archiveClassifier.set("tests")
-	}
-
-	project.afterEvaluate {
-		if (project.pluginManager.hasPlugin("org.jetbrains.kotlin.jvm")) {
-			finishKotlinPlugin(project, gradleSupport, testJarProvider, testScriptsProvider, installProvider)
-		} else {
-			finishJavaPlugin(project, gradleSupport, testJarProvider, testScriptsProvider, installProvider)
-		}
-	}
-}
-
-private fun finishKotlinPlugin(
-	project: Project,
-	gradleSupport: GradleSupport,
-	testJarProvider: TaskProvider<Jar>,
-	testScriptsProvider: TaskProvider<CreateStartScripts>,
-	installProvider: TaskProvider<Sync>,
-) {
-	val kotlin = project.extensions.getByType(KotlinJvmExtension::class.java)
-	val target = kotlin.target
-
-	val mainJarProvider = project.tasks.named(target.artifactsTaskName)
-
-	val testCompilation = target.compilations.named(TEST_COMPILATION_NAME)
-	val testClasses = project.objects.fileCollection()
-		.from(testCompilation.map { it.output.allOutputs })
-	val testDependencies = project.objects.fileCollection()
-		.from(
-			testCompilation.map {
-				it.runtimeDependencyFiles?.filter(File::isFile)
-					?: it.project.files()
-			},
-		)
-
-	configureTasks(
-		project,
-		gradleSupport,
-		mainJarProvider,
-		testClasses,
-		testDependencies,
-		testJarProvider,
-		testScriptsProvider,
-		installProvider,
-	)
-}
-
-private fun finishJavaPlugin(
-	project: Project,
-	gradleSupport: GradleSupport,
-	testJarProvider: TaskProvider<Jar>,
-	testScriptsProvider: TaskProvider<CreateStartScripts>,
-	installProvider: TaskProvider<Sync>,
-) {
-	val mainJarProvider = project.tasks.named(JAR_TASK_NAME)
-
-	val testCompilation = project.tasks.named(COMPILE_TEST_JAVA_TASK_NAME)
-	val testClasses = project.objects.fileCollection()
-		.from(testCompilation.flatMap { (it as JavaCompile).destinationDirectory })
-	val testDependencies = project.objects.fileCollection()
-		.from(project.configurations.named(TEST_RUNTIME_CLASSPATH_CONFIGURATION_NAME))
-
-	configureTasks(
-		project,
-		gradleSupport,
-		mainJarProvider,
-		testClasses,
-		testDependencies,
-		testJarProvider,
-		testScriptsProvider,
-		installProvider,
-	)
-}
-
-private fun configureTasks(
-	project: Project,
-	gradleSupport: GradleSupport,
-	mainJarProvider: TaskProvider<Task>,
-	testClasses: FileCollection,
-	testDependencies: FileCollection,
-	testJarProvider: TaskProvider<Jar>,
-	testScriptsProvider: TaskProvider<CreateStartScripts>,
-	installProvider: TaskProvider<Sync>,
-) {
-	val testFrameworkProvider = project.tasks.named(TEST_TASK_NAME, Test::class.java)
-		.toTestFramework()
-
-	testJarProvider.configure {
-		it.from(testClasses)
-	}
-
-	testScriptsProvider.configure {
-		it.classpath = project.objects.fileCollection()
-			.from(mainJarProvider.map { it.outputs.files })
-			.from(testJarProvider.map { it.outputs.files })
-			.from(testDependencies)
-
-		it.mainClass.set(computeMain(gradleSupport, testFrameworkProvider, testClasses, testDependencies))
-	}
-
-	installProvider.configure {
-		it.into("bin") {
-			it.from(testScriptsProvider)
-		}
-		it.into("lib") {
-			it.from(testJarProvider)
-			it.from(mainJarProvider)
-			it.from(testDependencies)
+		suite.targets.configureEach { target ->
+			val testFrameworkProvider = target.testTask.toTestFramework()
+			configureTasks(
+				base = base,
+				testClasses = testClasses,
+				testDependencies = testDependencies,
+				mainJar = mainJar,
+				naming = Naming(suite.name)
+			) { scripts ->
+				scripts.mainClass.set(
+					computeMain(gradleSupport, testFrameworkProvider, testClasses, testDependencies)
+				)
+			}
 		}
 	}
 }

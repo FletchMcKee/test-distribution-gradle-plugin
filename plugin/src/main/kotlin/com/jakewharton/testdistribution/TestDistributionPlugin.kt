@@ -5,7 +5,7 @@ import org.gradle.api.Project
 import org.gradle.util.GradleVersion
 
 public class TestDistributionPlugin : Plugin<Project> {
-	override fun apply(project: Project) {
+	override fun apply(project: Project): Unit = with(project) {
 		// HEY! If you update the minimum-supported Gradle version check to see if the Kotlin language version
 		// can be bumped. See https://docs.gradle.org/current/userguide/compatibility.html#kotlin.
 		val gradleVersion = GradleVersion.current()
@@ -21,34 +21,36 @@ public class TestDistributionPlugin : Plugin<Project> {
 		}
 
 		var gotPlugin = false
-		project.afterEvaluate {
+		afterEvaluate {
 			check(gotPlugin) {
-				val name = if (project.path == ":") {
+				val name = if (path == ":") {
 					"root project"
 				} else {
-					"project ${project.path}"
+					"project $path"
 				}
 				"No compatible language plugin applied for JVM test distribution ($name)"
 			}
 		}
 
-		project.pluginManager.withPlugin("com.android.application") {
-			gotPlugin = true
-			configureAndroidPlugin(project, gradleSupport)
-		}
-		project.pluginManager.withPlugin("com.android.library") {
-			gotPlugin = true
-			configureAndroidPlugin(project, gradleSupport)
-		}
-
-		project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-			gotPlugin = true
-			configureKotlinMultiplatformPlugin(project, gradleSupport)
+		listOf(
+			"com.android.application",
+			"com.android.library",
+			"com.android.kotlin.multiplatform.library",
+		).forEach { id ->
+			pluginManager.withPlugin(id) {
+				gotPlugin = true
+				configureAndroidPlugin(gradleSupport)
+			}
 		}
 
-		project.pluginManager.withPlugin("org.gradle.java") {
+		pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
 			gotPlugin = true
-			configureJavaPlugin(project, gradleSupport)
+			configureKotlinMultiplatformPlugin(gradleSupport)
+		}
+
+		pluginManager.withPlugin("org.gradle.java") {
+			gotPlugin = true
+			configureJavaPlugin(gradleSupport)
 		}
 	}
 }

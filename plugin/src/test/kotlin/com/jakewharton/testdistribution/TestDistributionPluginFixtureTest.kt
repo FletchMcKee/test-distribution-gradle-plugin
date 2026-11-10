@@ -44,7 +44,7 @@ class TestDistributionPluginFixtureTest(
 		val installDir = fixtureDir.resolve("build/install/debugUnitTest")
 		assertThat(installDir).isDirectory()
 
-		val binaryFile = installDir.resolve("bin/$name-test")
+		val binaryFile = installDir.resolve("bin/$name-unitTest")
 		assertThat(binaryFile.readText())
 			.contains("""org.junit.runner.JUnitCore "com.example.AddTest"""")
 
@@ -63,7 +63,7 @@ class TestDistributionPluginFixtureTest(
 		val installDir = fixtureDir.resolve("build/install/debugUnitTest")
 		assertThat(installDir).isDirectory()
 
-		val binaryFile = installDir.resolve("bin/$name-test")
+		val binaryFile = installDir.resolve("bin/$name-unitTest")
 		assertThat(binaryFile.readText())
 			.contains("""org.junit.runner.JUnitCore "com.example.AddTest"""")
 
@@ -199,21 +199,32 @@ class TestDistributionPluginFixtureTest(
 	@Test fun junit4PluginKotlinMppWithAndroid() {
 		val name = "junit4-plugin-kotlin-mpp-with-android"
 		val fixtureDir = File(fixturesDir, name)
-		val buildResult = createRunner(fixtureDir, "installJvmTestDistribution").build()
+		val buildResult = createRunner(fixtureDir, "installJvmTestDistribution", "installAndroidHostTestDistribution").build()
 
+		assertThat(buildResult.task(":jvmTest")).isNull()
+		assertThat(buildResult.task(":androidHostTest")).isNull()
 		assertThat(buildResult.task(":installJvmTestDistribution")).isSuccess()
+		assertThat(buildResult.task(":installAndroidHostTestDistribution")).isSuccess()
 
-		val installDir = fixtureDir.resolve("build/install/jvmTest")
-		assertThat(installDir).isDirectory()
+		val jvmInstallDir = fixtureDir.resolve("build/install/jvmTest")
+		assertThat(jvmInstallDir).isDirectory()
 
-		val binaryFile = installDir.resolve("bin/$name-test")
-		assertThat(binaryFile.readText())
+		val jvmBinaryFile = jvmInstallDir.resolve("bin/$name-test")
+		assertThat(jvmBinaryFile.readText())
 			.contains("""org.junit.runner.JUnitCore "com.example.AddTest"""")
 
-		assertThat(runScript(binaryFile))
+		assertThat(runScript(jvmBinaryFile))
 			.contains("OK (1 test)")
 
-		// TODO We should build Android as well.
+		val androidInstallDir = fixtureDir.resolve("build/install/androidHostTest")
+		assertThat(androidInstallDir).isDirectory()
+
+		val androidBinaryFile = androidInstallDir.resolve("bin/$name-unitTest")
+		assertThat(androidBinaryFile.readText())
+			.contains("""org.junit.runner.JUnitCore "com.example.AddTest" "com.example.SubTest""")
+
+		assertThat(runScript(androidBinaryFile))
+			.contains("OK (2 tests)")
 	}
 
 	@Ignore("Not currently working")
@@ -247,7 +258,7 @@ class TestDistributionPluginFixtureTest(
 		val installDir = fixtureDir.resolve("build/install/debugUnitTest")
 		assertThat(installDir).isDirectory()
 
-		val binaryFile = installDir.resolve("bin/$name-test")
+		val binaryFile = installDir.resolve("bin/$name-unitTest")
 		assertThat(binaryFile.readText())
 			.contains("org.junit.platform.console.ConsoleLauncher")
 
