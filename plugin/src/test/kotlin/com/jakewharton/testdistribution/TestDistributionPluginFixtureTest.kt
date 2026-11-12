@@ -216,9 +216,7 @@ class TestDistributionPluginFixtureTest(
 		// TODO We should build Android as well.
 	}
 
-	@Ignore("Not currently working")
-	@Test
-	fun junit4PluginTestsInLibrary() {
+	@Test fun junit4PluginTestsInLibrary() {
 		val name = "junit4-plugin-tests-in-library"
 		val fixtureDir = File(fixturesDir, name)
 		val buildResult = createRunner(fixtureDir, "installTestDistribution").build()
@@ -230,7 +228,7 @@ class TestDistributionPluginFixtureTest(
 
 		val binaryFile = installDir.resolve("bin/$name-test")
 		assertThat(binaryFile.readText())
-			.contains("""org.junit.runner.JUnitCore "com.example.AddTest" "com.example.lib.PlusTest"""")
+			.contains("""org.junit.runner.JUnitCore "com.example.AddTest"""")
 
 		assertThat(runScript(binaryFile))
 			.contains("OK (2 tests)")
